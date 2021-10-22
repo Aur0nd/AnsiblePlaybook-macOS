@@ -1,0 +1,1 @@
+m1 ansible_host=10.0.0.16 ansible_user=aurond ansible_ssh_pass=Yunaki25% 

@@ -1,0 +1,118 @@
+---
+- hosts: m1 #localhost
+  tasks:
+    - name: Install homebrew
+      include_role:
+        name: geerlingguy.homebrew
+
+    - name: "add custom homebrew repos"
+      community.general.homebrew_tap:
+        name:
+          [
+            adoptopenjdk/openjdk,
+            cavaliercoder/dmidecode,
+            fishtown-analytics/dbt,
+            homebrew/cask-versions,
+            thoughtbot/formulae,
+            weaveworks/tap,
+            datawire/blackbird,
+            gromgit/fuse,
+            hashicorp/tap,
+            homebrew/bundle,
+            homebrew/core,
+            microsoft/mssql-release,
+            mongodb/brew,
+            warrensbox/tap,
+          ]
+    - name: Install core packages via brew casks
+      community.general.homebrew_cask:
+        name: "{{ item }}"
+      ignore_errors: yes
+      with_items:
+        - unzip
+        - lastpass
+        - adoptopenjdk/openjdk/adoptopenjdk8
+        - dash # documentation lookup
+        - datagrip
+        - docker
+        # - hicolor-icon-theme
+        - dmidecode
+        - google-chrome
+        - google-cloud-sdk
+        - iterm2
+        - ngrok # create localhost public through public server
+        - osxfuse # enable ntfs windows support
+        # - postico # connecting to postgres
+        - postman
+        # - rstudio
+        - slack
+        - signal
+        - tunnelblick
+        - virtualbox
+        - visual-studio-code
+        #watchman
+        # - zoomus
+    - name: "Install homebrew packages"
+      ignore_errors: yes
+      community.general.homebrew:
+        name: [
+            "ca-certificates",
+            "autoconf",
+            "automake",
+            "aws-iam-authenticator",
+            "awscli",
+            "azure-cli",
+            "ansible",
+            "awslogs",
+            "bash-git-prompt",
+            "kubernetes-cli",
+            "kubernetes-helm",
+            "go",
+            "tree",
+            "terraform",
+            "mssql-tools",
+            "mongodb-database-tools",
+            "minikube",
+            "tfswitch",
+            "tflint",
+            "terragrunt",
+            "terraform_landscape",
+            "gpg",
+            # 'dnsmasq#'
+            "direnv",
+            "python",
+            "iproute2mac",
+          ]
+        state: present
+        update_homebrew: yes
+
+    - name: Get the path to ZSH
+      become: false
+      local_action: command which zsh
+      register: zsh_path
+
+    - name: "Ensure homebrew zsh is in allowed shells"
+      lineinfile:
+        path: /etc/shells
+        line: "{{ zsh_path.stdout }}"
+      become: true
+
+    - name: Install Oh My ZSH
+      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+      args:
+        creates: "/Users/{{ lookup('env', 'USER') }}/.oh-my-zsh"
+
+    - name: Install iStat Menus
+      shell: wget -O istat.zip https://download.bjango.com/istatmenus/
+    - name: Install iStatMenus
+      shell: unzip istat && cd iStat*/Contents/MacOS/ && ./iStat*
+    - name: Set ZSH as the default shell
+      shell: chsh -s $(which zsh) {{ lookup('env', 'USER') }}
+      become: true
+    - name: "Create a default ZSH configuration"
+      ignore_errors: yes
+      template:
+        src: templates/.zshrc.j2
+        dest: /Users/{{ lookup('env', 'USER') }}/.zshrc
+        owner: "{{ lookup('env', 'USER') }}"
+        force: yes
