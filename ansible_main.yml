@@ -1,10 +1,11 @@
 ---
-- hosts: m1 #localhost
+- hosts: localhost
   tasks:
+    - name: Install the requirements 
+      shell: ansible-galaxy install -r requirements.yml
     - name: Install homebrew
       include_role:
         name: geerlingguy.homebrew
-
     - name: "add custom homebrew repos"
       community.general.homebrew_tap:
         name:
@@ -16,7 +17,6 @@
             thoughtbot/formulae,
             weaveworks/tap,
             datawire/blackbird,
-            gromgit/fuse,
             hashicorp/tap,
             homebrew/bundle,
             homebrew/core,
@@ -29,19 +29,17 @@
         name: "{{ item }}"
       ignore_errors: yes
       with_items:
-        - unzip
         - lastpass
         - adoptopenjdk/openjdk/adoptopenjdk8
         - dash # documentation lookup
         - datagrip
         - docker
         # - hicolor-icon-theme
-        - dmidecode
+        #- dmidecode
         - google-chrome
         - google-cloud-sdk
-        - iterm2
         - ngrok # create localhost public through public server
-        - osxfuse # enable ntfs windows support
+        #- osxfuse # enable ntfs windows support
         # - postico # connecting to postgres
         - postman
         # - rstudio
@@ -51,16 +49,18 @@
         - virtualbox
         - visual-studio-code
         #watchman
-        # - zoomus
     - name: "Install homebrew packages"
       ignore_errors: yes
       community.general.homebrew:
         name: [
+	          "wget",
+            "unzip",
             "ca-certificates",
             "autoconf",
             "automake",
             "aws-iam-authenticator",
             "awscli",
+            "rename",
             "azure-cli",
             "ansible",
             "awslogs",
@@ -69,11 +69,10 @@
             "kubernetes-helm",
             "go",
             "tree",
-            "terraform",
-            "mssql-tools",
+            "tfswitch",
+            #"mssql-tools",
             "mongodb-database-tools",
             "minikube",
-            "tfswitch",
             "tflint",
             "terragrunt",
             "terraform_landscape",
@@ -85,34 +84,38 @@
           ]
         state: present
         update_homebrew: yes
+    - block:
+        - name: Get the path to ZSH
+          become: false
+          local_action: command which zsh
+          register: zsh_path
 
-    - name: Get the path to ZSH
-      become: false
-      local_action: command which zsh
-      register: zsh_path
+        - name: "Ensure homebrew zsh is in allowed shells"
+          lineinfile:
+            path: /etc/shells
+            line: "{{ zsh_path.stdout }}"
+        - name: Install Oh My ZSH
+          shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+          args:
+            creates: "/Users/{{ lookup('env', 'USER') }}/.oh-my-zsh"
 
-    - name: "Ensure homebrew zsh is in allowed shells"
-      lineinfile:
-        path: /etc/shells
-        line: "{{ zsh_path.stdout }}"
-      become: true
-
-    - name: Install Oh My ZSH
-      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
-      args:
-        creates: "/Users/{{ lookup('env', 'USER') }}/.oh-my-zsh"
-
-    - name: Install iStat Menus
-      shell: wget -O istat.zip https://download.bjango.com/istatmenus/
-    - name: Install iStatMenus
-      shell: unzip istat && cd iStat*/Contents/MacOS/ && ./iStat*
-    - name: Set ZSH as the default shell
-      shell: chsh -s $(which zsh) {{ lookup('env', 'USER') }}
-      become: true
-    - name: "Create a default ZSH configuration"
+        - name: Install iStat Menus
+          shell: wget -O istat.zip https://download.bjango.com/istatmenus/
+          
+        - name: Click Install on the popup MANUALLY
+          shell: unzip istat && cd iStat*/Contents/MacOS/ && ./iStat*
+          
+        - name: Download Hyper
+          shell: wget -O Hyper.dmg https://releases.hyper.is/download/mac
+        - name: Move Hyper in the Apps
+          shell: hdiutil attach Hyper.dmg && cp -R /Volumes/Hyper*/Hyper.app  /Applications
+        - name: Set ZSH as the default shell
+          shell: chsh -s $(which zsh) {{ lookup('env', 'USER') }}
+        - name: "Create a default ZSH configuration"
+          template:
+            src: templates/.zshrc.j2
+            dest: /Users/{{ lookup('env', 'USER') }}/.zshrc
+            owner: "{{ lookup('env', 'USER') }}"
+            force: yes
+      become: yes 
       ignore_errors: yes
-      template:
-        src: templates/.zshrc.j2
-        dest: /Users/{{ lookup('env', 'USER') }}/.zshrc
-        owner: "{{ lookup('env', 'USER') }}"
-        force: yes
