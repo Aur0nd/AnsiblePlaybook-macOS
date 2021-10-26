@@ -29,6 +29,7 @@
         name: "{{ item }}"
       ignore_errors: yes
       with_items:
+        - whatsapp
         - lastpass
         - adoptopenjdk/openjdk/adoptopenjdk8
         - dash # documentation lookup
