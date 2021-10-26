@@ -71,7 +71,6 @@
             "go",
             "tree",
             "tfswitch",
-            #"mssql-tools",
             "mongodb-database-tools",
             "minikube",
             "tflint",
