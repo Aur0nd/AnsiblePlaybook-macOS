@@ -54,7 +54,8 @@
       ignore_errors: yes
       community.general.homebrew:
         name: [
-	          "wget",
+	    "wget",
+	    "cloudmounter",
             "unzip",
             "ca-certificates",
             "autoconf",
